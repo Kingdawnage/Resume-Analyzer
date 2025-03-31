@@ -1,0 +1,67 @@
+services:
+  frontend:
+    image: ra-frontend:production
+    container_name: frontend
+    build: 
+      context: ./ra-frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    ports:
+      - "3000:3000"
+    networks:
+      - ra-network
+    depends_on:
+      backend:
+        condition: service_healthy
+      nlp-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    image: ra-backend:production
+    container_name: backend
+    build: 
+      context: ./ra-backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_MAXAGE=${JWT_MAXAGE}
+      - FRONTEND_URL=${FRONTEND_URL}
+    ports:
+      - "8080:8080"
+    networks:
+      - ra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nlp-service:
+    image: ra-nlp-service:production
+    container_name: ra-nlp-service
+    build: 
+      context: ./nlp-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - ra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+networks:
+  ra-network:
+    name: ra-network
+    driver: bridge
+

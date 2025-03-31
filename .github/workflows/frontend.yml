@@ -1,0 +1,76 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ra-frontend/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ra-frontend/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: ra-frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd ra-frontend
+        npm ci
+
+    - name: Type check
+      run: |
+        cd ra-frontend
+        npm run type-check
+
+    - name: Lint
+      run: |
+        cd ra-frontend
+        npm run lint
+
+    - name: Build
+      run: |
+        cd ra-frontend
+        npm run build
+
+    - name: Test
+      run: |
+        cd ra-frontend
+        npm run test
+
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./ra-frontend
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/ra-frontend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max 

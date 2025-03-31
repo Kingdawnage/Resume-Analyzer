@@ -1,0 +1,57 @@
+name: Deploy Stack
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push all services
+      run: |
+        docker-compose build
+        docker-compose push
+
+    - name: Deploy to production
+      env:
+        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_MAXAGE: ${{ secrets.JWT_MAXAGE }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        NLP_SERVICE_API_KEY: ${{ secrets.NLP_SERVICE_API_KEY }}
+      run: |
+        # Pull the latest images
+        docker-compose pull
+        
+        # Deploy the stack
+        docker-compose up -d
+
+    - name: Health check
+      run: |
+        # Wait for services to start
+        sleep 30
+        
+        # Check frontend
+        curl -f http://localhost:3000 || exit 1
+        
+        # Check backend
+        curl -f http://localhost:8080/health || exit 1
+        
+        # Check NLP service
+        curl -f http://localhost:8000/health || exit 1 
