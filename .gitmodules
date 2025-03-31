@@ -1,0 +1,9 @@
+[submodule "nlp-service"]
+	path = nlp-service
+	url = https://github.com/Kingdawnage/nlp-service.git
+[submodule "ra-frontend"]
+	path = ra-frontend
+	url = https://github.com/Kingdawnage/ra-frontend.git
+[submodule "ra-backend"]
+	path = ra-backend
+	url = https://github.com/Kingdawnage/ra-backend.git
